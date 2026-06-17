@@ -94,5 +94,9 @@
   {
     "slug": "offentleglova",
     "aliases": ["offentleglova", "offl.", "lov om opptak av offentlige møter"]
+  },
+  {
+    "slug": "vergemalsloven",
+    "aliases": ["vergemålsloven", "vergemalsloven", "vml."]
   }
 ]

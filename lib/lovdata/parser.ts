@@ -15,6 +15,9 @@ import {
   parseLovdataId,
   buildLovdataUrl,
   inferCitationForms,
+  parseLovdataDate,
+  cleanDocumentTitle,
+  canonicalDocumentKey,
 } from "./slug";
 
 const NODE_CLASS_MAP: Record<string, LegalNodeType> = {
@@ -57,14 +60,16 @@ function extractMetadata($: cheerio.CheerioAPI): Partial<LegalDocumentMeta> {
 
   return {
     lovdataId: legacyId,
-    documentKey: dokid.replace(/^NL\//, "").toLowerCase() || legacyId.toLowerCase(),
-    title: $("head title").text().trim(),
+    documentKey:
+      canonicalDocumentKey(dokid.toLowerCase()) ||
+      (parsed ? `${parsed.type}/${parsed.date}-${parsed.number}` : legacyId.toLowerCase()),
+    title: cleanDocumentTitle($("head title").text().trim()),
     ministry: getField("ministry"),
     status: getField("dateInForce"),
     date: parsed?.date ?? null,
     number: parsed?.number ?? null,
     legalAreas,
-    sourceUpdatedAt: lastUpdated ? new Date(lastUpdated) : null,
+    sourceUpdatedAt: parseLovdataDate(lastUpdated),
     language: $("html").attr("lang") ?? "nb",
   };
 }
@@ -84,18 +89,8 @@ function extractSectionInfo(
   el: Element
 ): { number: string | null; title: string | null; normalizedSectionNumber: string | null } {
   const dataName = el.attribs?.["data-name"] ?? null;
-  const header = $(el).find(".legalArticleHeader").first();
-  if (header.length) {
-    const value = header.find(".legalArticleValue").text().trim();
-    const titlePart = header.find(".legalArticleTitle").text().trim();
-    const number = value || dataName;
-    return {
-      number,
-      title: titlePart || null,
-      normalizedSectionNumber: normalizeSectionNumber(dataName ?? number),
-    };
-  }
 
+  // Only direct-child headings – .find() would pick up nested § headers from descendants
   const heading = $(el).children("h2, h3, h4").first();
   if (heading.length) {
     const text = getTextContent(heading);
@@ -111,11 +106,23 @@ function extractSectionInfo(
     if (chapterMatch) {
       return {
         number: chapterMatch[1],
-        title: chapterMatch[2]?.trim() || text,
+        title: chapterMatch[2]?.trim() || null,
         normalizedSectionNumber: null,
       };
     }
     return { number: null, title: text, normalizedSectionNumber: null };
+  }
+
+  const header = $(el).children(".legalArticleHeader").first();
+  if (header.length) {
+    const value = header.find(".legalArticleValue").text().trim();
+    const titlePart = header.find(".legalArticleTitle").text().trim();
+    const number = value || dataName;
+    return {
+      number,
+      title: titlePart || null,
+      normalizedSectionNumber: normalizeSectionNumber(dataName ?? number),
+    };
   }
 
   return {
@@ -168,11 +175,36 @@ function parseNodeTree(
     html,
     order,
     anchor,
-    slugPath: normalizedSectionNumber,
-    normalizedSectionNumber,
+    slugPath:
+      nodeType === "section" ? normalizedSectionNumber : null,
+    normalizedSectionNumber:
+      nodeType === "section" ? normalizedSectionNumber : null,
     lovdataUrl,
     children,
   };
+}
+
+/**
+ * Ensure slugPath is unique per document tree. First section wins the clean URL;
+ * later duplicates keep normalizedSectionNumber for reference resolution but no slugPath.
+ */
+export function dedupeSlugPaths(nodes: ParsedLegalNode[]): void {
+  const seen = new Set<string>();
+
+  function walk(nodeList: ParsedLegalNode[]) {
+    for (const node of nodeList) {
+      if (node.slugPath) {
+        if (seen.has(node.slugPath)) {
+          node.slugPath = null;
+        } else {
+          seen.add(node.slugPath);
+        }
+      }
+      walk(node.children);
+    }
+  }
+
+  walk(nodes);
 }
 
 function extractExplicitLinks(
@@ -259,7 +291,7 @@ export function parseLovdataHtml(
   const orderCounter = { value: 0 };
   const nodes: ParsedLegalNode[] = [];
 
-  $("main section.section, main > section").each((_, el) => {
+  $("main > section.section, main > section").each((_, el) => {
     const node = parseNodeTree($, el, orderCounter);
     if (node) nodes.push(node);
   });
@@ -271,6 +303,8 @@ export function parseLovdataHtml(
       if (node) nodes.push(node);
     });
   }
+
+  dedupeSlugPaths(nodes);
 
   const explicitLinks = extractExplicitLinks($, "main");
 

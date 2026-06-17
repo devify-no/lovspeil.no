@@ -2,18 +2,74 @@ import { db, schema } from "@/db";
 import { eq, asc, and, ilike, sql } from "drizzle-orm";
 import type { LegalDocument, LegalNode } from "@/db/schema";
 import type { TocEntry } from "@/types/legal";
+import {
+  formatTocLabel,
+  isSubPartChapter,
+} from "@/lib/lovdata/node-display";
+import { cache } from "react";
+import { isAmendmentDocument } from "@/lib/lovdata/document-classify";
+import {
+  buildDocumentLinkIndex,
+  type DocumentLinkIndex,
+} from "@/lib/lovdata/link-resolver";
+
+/** SQL filter excluding amendment acts from listings */
+const notAmendmentFilter = sql`(
+  ${schema.legalDocuments.title} NOT ILIKE 'lov om endring%'
+  AND ${schema.legalDocuments.title} NOT ILIKE 'forskrift om endring%'
+)`;
 
 export async function getAllDocuments(type?: "law" | "regulation") {
-  const query = db
+  const conditions = [notAmendmentFilter];
+  if (type) {
+    conditions.push(eq(schema.legalDocuments.type, type));
+  }
+
+  return db
     .select()
     .from(schema.legalDocuments)
+    .where(and(...conditions))
     .orderBy(asc(schema.legalDocuments.title));
-
-  if (type) {
-    return query.where(eq(schema.legalDocuments.type, type));
-  }
-  return query;
 }
+
+export const getDocumentLinkIndex = cache(async (): Promise<DocumentLinkIndex> => {
+  const documents = await db
+    .select({
+      documentKey: schema.legalDocuments.documentKey,
+      slug: schema.legalDocuments.slug,
+      type: schema.legalDocuments.type,
+      title: schema.legalDocuments.title,
+    })
+    .from(schema.legalDocuments);
+
+  const nodes = await db
+    .select({
+      documentKey: schema.legalDocuments.documentKey,
+      nodeType: schema.legalNodes.nodeType,
+      number: schema.legalNodes.number,
+      anchor: schema.legalNodes.anchor,
+      normalizedSectionNumber: schema.legalNodes.normalizedSectionNumber,
+      slugPath: schema.legalNodes.slugPath,
+    })
+    .from(schema.legalNodes)
+    .innerJoin(
+      schema.legalDocuments,
+      eq(schema.legalNodes.documentId, schema.legalDocuments.id)
+    );
+
+  const dbAliases = await db
+    .select({
+      documentKey: schema.legalDocuments.documentKey,
+      normalizedAlias: schema.documentAliases.normalizedAlias,
+    })
+    .from(schema.documentAliases)
+    .innerJoin(
+      schema.legalDocuments,
+      eq(schema.documentAliases.documentId, schema.legalDocuments.id)
+    );
+
+  return buildDocumentLinkIndex(documents, nodes, dbAliases);
+});
 
 export async function getDocumentBySlug(slug: string) {
   const [doc] = await db
@@ -21,7 +77,9 @@ export async function getDocumentBySlug(slug: string) {
     .from(schema.legalDocuments)
     .where(eq(schema.legalDocuments.slug, slug))
     .limit(1);
-  return doc ?? null;
+  if (!doc) return null;
+  if (isAmendmentDocument(doc.title)) return null;
+  return doc;
 }
 
 export async function getDocumentNodes(documentId: string) {
@@ -92,29 +150,43 @@ export async function getOutgoingReferences(nodeId: string) {
 }
 
 export function buildToc(nodes: LegalNode[]): TocEntry[] {
-  const nodeMap = new Map<string, LegalNode>();
   const childrenMap = new Map<string | null, LegalNode[]>();
 
   for (const node of nodes) {
-    nodeMap.set(node.id, node);
     const parentId = node.parentId;
     const siblings = childrenMap.get(parentId) ?? [];
     siblings.push(node);
     childrenMap.set(parentId, siblings);
   }
 
+  for (const siblings of childrenMap.values()) {
+    siblings.sort((a, b) => a.order - b.order);
+  }
+
   function buildTree(parentId: string | null): TocEntry[] {
     const children = childrenMap.get(parentId) ?? [];
-    return children
-      .filter((n) => n.nodeType === "chapter" || n.nodeType === "section")
-      .map((node) => ({
+    const entries: TocEntry[] = [];
+
+    for (const node of children) {
+      if (node.nodeType !== "chapter" && node.nodeType !== "section") continue;
+
+      if (node.nodeType === "chapter" && isSubPartChapter(node)) {
+        entries.push(...buildTree(node.id));
+        continue;
+      }
+
+      entries.push({
         id: node.id,
         title: node.title ?? node.number ?? node.anchor,
+        label: formatTocLabel(node),
         anchor: node.anchor,
         slugPath: node.slugPath,
         sectionNumber: node.normalizedSectionNumber,
         children: buildTree(node.id),
-      }));
+      });
+    }
+
+    return entries;
   }
 
   return buildTree(null);
@@ -140,7 +212,7 @@ export async function getAllSlugs(type: "law" | "regulation") {
       slug: schema.legalDocuments.slug,
     })
     .from(schema.legalDocuments)
-    .where(eq(schema.legalDocuments.type, type));
+    .where(and(eq(schema.legalDocuments.type, type), notAmendmentFilter));
 }
 
 export async function getAllSectionPaths() {
@@ -155,7 +227,12 @@ export async function getAllSectionPaths() {
       schema.legalDocuments,
       eq(schema.legalNodes.documentId, schema.legalDocuments.id)
     )
-    .where(sql`${schema.legalNodes.slugPath} IS NOT NULL`);
+    .where(
+      and(
+        sql`${schema.legalNodes.slugPath} IS NOT NULL`,
+        notAmendmentFilter
+      )
+    );
 }
 
 export async function getUnresolvedReferences(limit = 100) {

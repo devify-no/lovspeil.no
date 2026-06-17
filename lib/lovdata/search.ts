@@ -4,6 +4,11 @@ import type { SearchResult, DocumentType } from "@/types/legal";
 import { buildDocumentUrl, normalizeAlias, normalizeSectionNumber } from "./slug";
 import { findDocumentByAlias, type ReferenceContext } from "./reference-resolver";
 
+const notAmendmentFilter = sql`(
+  ${schema.legalDocuments.title} NOT ILIKE 'lov om endring%'
+  AND ${schema.legalDocuments.title} NOT ILIKE 'forskrift om endring%'
+)`;
+
 export interface SearchOptions {
   query: string;
   type?: DocumentType | "all";
@@ -80,8 +85,17 @@ export async function searchLegalContent(
 
   const typeFilter =
     type === "all"
-      ? undefined
-      : eq(schema.legalDocuments.type, type === "law" ? "law" : "regulation");
+      ? notAmendmentFilter
+      : and(
+          eq(schema.legalDocuments.type, type === "law" ? "law" : "regulation"),
+          notAmendmentFilter
+        );
+
+  const textFilter = or(
+    ilike(schema.legalDocuments.title, `%${trimmed}%`),
+    ilike(schema.legalDocuments.shortTitle, `%${trimmed}%`),
+    ilike(schema.legalDocuments.slug, `%${trimmed}%`)
+  );
 
   // Search documents by title
   const docResults = await db
@@ -93,22 +107,7 @@ export async function searchLegalContent(
       shortTitle: schema.legalDocuments.shortTitle,
     })
     .from(schema.legalDocuments)
-    .where(
-      typeFilter
-        ? and(
-            typeFilter,
-            or(
-              ilike(schema.legalDocuments.title, `%${trimmed}%`),
-              ilike(schema.legalDocuments.shortTitle, `%${trimmed}%`),
-              ilike(schema.legalDocuments.slug, `%${trimmed}%`)
-            )
-          )
-        : or(
-            ilike(schema.legalDocuments.title, `%${trimmed}%`),
-            ilike(schema.legalDocuments.shortTitle, `%${trimmed}%`),
-            ilike(schema.legalDocuments.slug, `%${trimmed}%`)
-          )
-    )
+    .where(and(typeFilter, textFilter))
     .limit(limit);
 
   const results: SearchResult[] = docResults.map((doc) => ({
@@ -144,11 +143,7 @@ export async function searchLegalContent(
       schema.legalDocuments,
       eq(schema.legalNodes.documentId, schema.legalDocuments.id)
     )
-    .where(
-      typeFilter
-        ? and(typeFilter, ilike(schema.legalNodes.plainText, `%${trimmed}%`))
-        : ilike(schema.legalNodes.plainText, `%${trimmed}%`)
-    )
+    .where(and(typeFilter, ilike(schema.legalNodes.plainText, `%${trimmed}%`)))
     .limit(limit);
 
   for (const node of nodeResults) {

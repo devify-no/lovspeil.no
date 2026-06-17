@@ -40,8 +40,21 @@
   }
 
   .prose-legal a,
-  .prose-legal .legal-ref {
-    @apply text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900;
+  .prose-legal .legal-link {
+    @apply font-medium text-blue-700 underline decoration-blue-500 decoration-2 underline-offset-[3px] hover:text-blue-900 hover:decoration-blue-700;
+  }
+
+  .prose-legal .legal-link--internal {
+    @apply text-blue-700 decoration-blue-500;
+  }
+
+  .prose-legal .legal-link--external::after {
+    content: " ↗";
+    @apply text-[0.75em] font-normal text-blue-500 no-underline;
+  }
+
+  .prose-legal .changesToParent a {
+    @apply font-medium text-blue-700 underline decoration-blue-500 decoration-2 underline-offset-[3px];
   }
 
   .prose-legal .legalArticleValue {
@@ -50,5 +63,37 @@
 
   .prose-legal .changesToParent {
     @apply my-2 rounded border-l-4 border-stone-300 bg-stone-50 px-3 py-2 text-sm italic text-stone-600;
+  }
+
+  .prose-legal sup.footnotereference {
+    @apply align-super text-[0.75em] leading-none;
+    vertical-align: super;
+  }
+
+  .prose-legal sup.footnotereference .footnote-ref {
+    @apply font-medium text-blue-700 no-underline hover:underline;
+    text-decoration-thickness: 1px;
+  }
+
+  .prose-legal footer.footnotes {
+    @apply mt-6 border-t border-stone-200 pt-4 text-sm leading-relaxed text-stone-600;
+  }
+
+  .prose-legal footer.footnotes .footnote {
+    @apply mb-2 block;
+  }
+
+  .prose-legal footer.footnotes .footnoteLabel {
+    @apply mr-1 font-semibold text-stone-800;
+  }
+
+  /* TOC sidebar: scrollable but no visible scrollbar */
+  .toc-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .toc-scroll::-webkit-scrollbar {
+    display: none;
   }
 }

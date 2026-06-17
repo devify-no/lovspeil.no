@@ -11,6 +11,7 @@ interface TableOfContentsProps {
   documentSlug: string;
   documentType: DocumentType;
   activeSlugPath?: string;
+  activeAnchor?: string | null;
 }
 
 function TocItem({
@@ -18,26 +19,29 @@ function TocItem({
   documentSlug,
   documentType,
   activeSlugPath,
+  activeAnchor,
   depth = 0,
 }: {
   entry: TocEntry;
   documentSlug: string;
   documentType: DocumentType;
   activeSlugPath?: string;
+  activeAnchor?: string | null;
   depth?: number;
 }) {
   const href = entry.slugPath
     ? buildDocumentUrl(documentType, documentSlug, entry.slugPath)
     : `#${entry.anchor}`;
-  const isActive = entry.slugPath === activeSlugPath;
-  const label = entry.sectionNumber
-    ? `§ ${entry.sectionNumber}${entry.title ? `. ${entry.title}` : ""}`
-    : entry.title;
+  const isActive =
+    (activeAnchor && entry.anchor === activeAnchor) ||
+    (activeSlugPath && entry.slugPath === activeSlugPath);
+  const label = entry.label;
 
   return (
     <li>
       <Link
         href={href}
+        data-toc-anchor={entry.anchor}
         className={`block rounded px-2 py-1 text-sm hover:bg-stone-100 ${
           isActive ? "bg-stone-100 font-medium text-stone-900" : "text-stone-600"
         }`}
@@ -54,6 +58,7 @@ function TocItem({
               documentSlug={documentSlug}
               documentType={documentType}
               activeSlugPath={activeSlugPath}
+              activeAnchor={activeAnchor}
               depth={depth + 1}
             />
           ))}
@@ -68,6 +73,7 @@ export function TableOfContents({
   documentSlug,
   documentType,
   activeSlugPath,
+  activeAnchor,
 }: TableOfContentsProps) {
   return (
     <nav aria-label="Innholdsfortegnelse" className="text-sm">
@@ -80,6 +86,7 @@ export function TableOfContents({
             documentSlug={documentSlug}
             documentType={documentType}
             activeSlugPath={activeSlugPath}
+            activeAnchor={activeAnchor}
           />
         ))}
       </ul>

@@ -99,6 +99,7 @@ export interface SearchResult {
 export interface TocEntry {
   id: string;
   title: string;
+  label: string;
   anchor: string;
   slugPath: string | null;
   sectionNumber: string | null;

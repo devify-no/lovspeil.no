@@ -14,6 +14,7 @@ import {
 } from "../lib/lovdata/reference-resolver";
 import { eq } from "drizzle-orm";
 import { parseLovdataHtml } from "../lib/lovdata/parser";
+import { canonicalDocumentKey } from "../lib/lovdata/slug";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -53,7 +54,7 @@ async function buildReferenceIndex() {
       title: doc.title,
       shortTitle: doc.shortTitle,
     };
-    documentsByKey.set(doc.documentKey, entry);
+    documentsByKey.set(canonicalDocumentKey(doc.documentKey), entry);
     documentsById.set(doc.id, entry);
     nodesByDocumentAndSection.set(doc.id, new Map());
   }

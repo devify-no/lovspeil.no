@@ -4,8 +4,6 @@ import { getAllDocuments } from "@/lib/queries";
 import { buildDocumentUrl } from "@/lib/lovdata/slug";
 import { pageMetadata } from "@/lib/seo/site";
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = pageMetadata({
   title: "Lover",
   description:

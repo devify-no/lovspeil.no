@@ -21,8 +21,6 @@ interface PageProps {
   params: Promise<{ slug: string; section: string }>;
 }
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -48,6 +46,7 @@ export async function generateMetadata({
   };
 }
 
+/** On-demand ISR – sections are listed in sitemap but not pre-rendered at build. */
 export const revalidate = 3600;
 
 export default async function LovSectionPage({ params }: PageProps) {

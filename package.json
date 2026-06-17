@@ -19,7 +19,8 @@
     "db:setup": "npm run db:up && npm run db:push",
     "import:xml": "tsx scripts/import-xml.ts",
     "build:references": "tsx scripts/build-reference-index.ts",
-    "sync:lovdata": "tsx scripts/sync-lovdata.ts"
+    "sync:lovdata": "tsx scripts/sync-lovdata.ts",
+    "migrate:long-slugs": "tsx scripts/migrate-long-slugs.ts"
   },
   "dependencies": {
     "cheerio": "^1.0.0",

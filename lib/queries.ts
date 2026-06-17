@@ -32,7 +32,9 @@ export async function getAllDocuments(type?: "law" | "regulation") {
     .orderBy(asc(schema.legalDocuments.title));
 }
 
-export const getDocumentLinkIndex = cache(async (): Promise<DocumentLinkIndex> => {
+let linkIndexPromise: Promise<DocumentLinkIndex> | null = null;
+
+async function fetchDocumentLinkIndex(): Promise<DocumentLinkIndex> {
   const documents = await db
     .select({
       documentKey: schema.legalDocuments.documentKey,
@@ -69,6 +71,14 @@ export const getDocumentLinkIndex = cache(async (): Promise<DocumentLinkIndex> =
     );
 
   return buildDocumentLinkIndex(documents, nodes, dbAliases);
+}
+
+/** Cached per-request and per build worker – link index is the same for all pages. */
+export const getDocumentLinkIndex = cache(async (): Promise<DocumentLinkIndex> => {
+  if (!linkIndexPromise) {
+    linkIndexPromise = fetchDocumentLinkIndex();
+  }
+  return linkIndexPromise;
 });
 
 export async function getDocumentBySlug(slug: string) {
@@ -221,6 +231,7 @@ export async function getAllSectionPaths() {
       docSlug: schema.legalDocuments.slug,
       docType: schema.legalDocuments.type,
       sectionSlug: schema.legalNodes.slugPath,
+      lastModified: schema.legalDocuments.importedAt,
     })
     .from(schema.legalNodes)
     .innerJoin(
@@ -232,7 +243,49 @@ export async function getAllSectionPaths() {
         sql`${schema.legalNodes.slugPath} IS NOT NULL`,
         notAmendmentFilter
       )
+    )
+    .orderBy(asc(schema.legalDocuments.slug), asc(schema.legalNodes.slugPath));
+}
+
+export async function getSectionPathCount() {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.legalNodes)
+    .innerJoin(
+      schema.legalDocuments,
+      eq(schema.legalNodes.documentId, schema.legalDocuments.id)
+    )
+    .where(
+      and(
+        sql`${schema.legalNodes.slugPath} IS NOT NULL`,
+        notAmendmentFilter
+      )
     );
+  return row?.count ?? 0;
+}
+
+export async function getSectionPathsPage(offset: number, limit: number) {
+  return db
+    .select({
+      docSlug: schema.legalDocuments.slug,
+      docType: schema.legalDocuments.type,
+      sectionSlug: schema.legalNodes.slugPath,
+      lastModified: schema.legalDocuments.importedAt,
+    })
+    .from(schema.legalNodes)
+    .innerJoin(
+      schema.legalDocuments,
+      eq(schema.legalNodes.documentId, schema.legalDocuments.id)
+    )
+    .where(
+      and(
+        sql`${schema.legalNodes.slugPath} IS NOT NULL`,
+        notAmendmentFilter
+      )
+    )
+    .orderBy(asc(schema.legalDocuments.slug), asc(schema.legalNodes.slugPath))
+    .offset(offset)
+    .limit(limit);
 }
 
 export async function getUnresolvedReferences(limit = 100) {

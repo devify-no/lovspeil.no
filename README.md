@@ -63,6 +63,8 @@ npm run db:migrate
 
 The app connects to Neon via `postgres.js` with SSL. Use the **pooled** connection string from the Neon dashboard for serverless hosting; for long imports (`npm run import:xml`), the direct (non-pooler) URL is often faster.
 
+**Static generation (SSG):** Law and regulation pages (~4 000) are pre-rendered at build time. Section pages use on-demand ISR (cached after first visit). Set `DATABASE_URL` in your hosting provider's **build** environment so `next build` can fetch slugs.
+
 **Uten Docker (lokal Postgres):**
 
 ```bash
@@ -108,6 +110,7 @@ npm run dev
 | `npm run import:xml` | Importer XML/HTML fra `/data` |
 | `npm run build:references` | Bygg kryssreferanse-indeks |
 | `npm run sync:lovdata` | (Fremtidig) Synkroniser fra Lovdata API |
+| `npm run migrate:long-slugs` | Kort ned slug-er over 200 tegn (nødvendig for SSG) |
 | `npm run db:up` | Start PostgreSQL via Docker |
 | `npm run db:down` | Stop PostgreSQL container |
 | `npm run db:reset` | Wipe and restart database |
@@ -150,8 +153,8 @@ Konservativ linking: kun auto-lenke ved confidence ≥ 0.75.
 
 ## SEO
 
-- Server-rendrede sider for alle lover og paragrafer
-- `sitemap.xml` med alle dokument- og paragraf-URL-er
+- Statically generated listing pages and document pages (~4 000); section pages via on-demand ISR
+- Split `sitemap.xml` index covering all documents and ~86 000 section URLs (Google 50k limit)
 - `robots.txt`
 - Canonical URLs og Open Graph metadata
 - JSON-LD (WebPage, BreadcrumbList, Legislation)

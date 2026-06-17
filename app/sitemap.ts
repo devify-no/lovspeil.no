@@ -1,57 +1,29 @@
 import type { MetadataRoute } from "next";
-import { getAllDocuments, getAllSectionPaths } from "@/lib/queries";
-import { buildDocumentUrl } from "@/lib/lovdata/slug";
-import { getSiteUrl } from "@/lib/seo/site";
+import {
+  buildCoreSitemap,
+  buildSectionSitemapChunk,
+  generateSitemapIds,
+  getSiteBaseUrl,
+} from "@/lib/sitemap";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = getSiteUrl();
+export async function generateSitemaps() {
+  return generateSitemapIds();
+}
 
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: `${baseUrl}/lover`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
-    { url: `${baseUrl}/forskrifter`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
-    { url: `${baseUrl}/sok`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
-    { url: `${baseUrl}/om`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
-    { url: `${baseUrl}/kilde-og-lisens`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
-  ];
+export default async function sitemap(props: {
+  id: Promise<number>;
+}): Promise<MetadataRoute.Sitemap> {
+  const id = await props.id;
+  const baseUrl = getSiteBaseUrl();
 
   try {
-    const laws = await getAllDocuments("law");
-    const regulations = await getAllDocuments("regulation");
-    const sections = await getAllSectionPaths();
-
-    const docPages: MetadataRoute.Sitemap = [
-      ...laws.map((doc) => ({
-        url: `${baseUrl}${buildDocumentUrl("law", doc.slug)}`,
-        lastModified: doc.importedAt ?? new Date(),
-        changeFrequency: "monthly" as const,
-        priority: 0.8,
-      })),
-      ...regulations.map((doc) => ({
-        url: `${baseUrl}${buildDocumentUrl("regulation", doc.slug)}`,
-        lastModified: doc.importedAt ?? new Date(),
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
-      })),
-    ];
-
-    const sectionPages: MetadataRoute.Sitemap = sections
-      .filter((s) => s.sectionSlug)
-      .map((s) => ({
-        url: `${baseUrl}${buildDocumentUrl(
-          s.docType as "law" | "regulation",
-          s.docSlug,
-          s.sectionSlug!
-        )}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly" as const,
-        priority: 0.6,
-      }));
-
-    return [...staticPages, ...docPages, ...sectionPages];
+    if (id === 0) {
+      return buildCoreSitemap(baseUrl);
+    }
+    return buildSectionSitemapChunk(baseUrl, id - 1);
   } catch {
-    return staticPages;
+    return id === 0 ? [] : [];
   }
 }

@@ -14,12 +14,11 @@ import {
 } from "@/components/legal/document-metadata";
 import { DocumentLayout } from "@/components/legal/document-layout";
 import { LegalContent } from "@/components/legal/legal-content";
+import { generateRegulationSlugParams } from "@/lib/static-params";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
-
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -44,6 +43,8 @@ export async function generateMetadata({
     },
   };
 }
+
+export const generateStaticParams = generateRegulationSlugParams;
 
 export const revalidate = 3600;
 

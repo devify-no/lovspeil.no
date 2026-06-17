@@ -14,12 +14,11 @@ import {
 } from "@/components/legal/document-metadata";
 import { DocumentLayout } from "@/components/legal/document-layout";
 import { LegalContent } from "@/components/legal/legal-content";
+import { generateLawSlugParams } from "@/lib/static-params";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
-
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -45,15 +44,7 @@ export async function generateMetadata({
   };
 }
 
-export async function generateStaticParams() {
-  try {
-    const { getAllSlugs } = await import("@/lib/queries");
-    const slugs = await getAllSlugs("law");
-    return slugs.map(({ slug }) => ({ slug }));
-  } catch {
-    return [];
-  }
-}
+export const generateStaticParams = generateLawSlugParams;
 
 export const revalidate = 3600;
 

@@ -16,6 +16,20 @@ export function normalizeAlias(text: string): string {
 }
 
 /**
+ * Slugs become filesystem path segments during SSG. Keep well under OS limits (255).
+ */
+export const MAX_DOCUMENT_SLUG_LENGTH = 200;
+
+function slugHash(stableKey: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < stableKey.length; i++) {
+    hash ^= stableKey.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36).padStart(7, "0").slice(0, 7);
+}
+
+/**
  * Create a URL-safe slug from text.
  */
 export function slugify(text: string): string {
@@ -112,24 +126,42 @@ export function generateDocumentSlug(
   for (const candidate of candidates) {
     if (!candidate) continue;
     if (!existingSlugs.has(candidate)) {
-      return finalizeDocumentSlug(candidate);
+      return finalizeDocumentSlug(candidate, canonicalKey);
     }
     const withKey = `${candidate}-${keySuffix}`;
     if (!existingSlugs.has(withKey)) {
-      return finalizeDocumentSlug(withKey);
+      return finalizeDocumentSlug(withKey, canonicalKey);
     }
   }
 
   const base = candidates.find(Boolean) ?? "dokument";
-  return finalizeDocumentSlug(`${base}-${keySuffix}`);
+  return finalizeDocumentSlug(`${base}-${keySuffix}`, canonicalKey);
 }
 
 /** Slugs must never contain path separators. */
-export function finalizeDocumentSlug(slug: string): string {
-  return slug
+export function finalizeDocumentSlug(
+  slug: string,
+  stableKey?: string
+): string {
+  const result = slug
     .replace(/\//g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+
+  if (result.length <= MAX_DOCUMENT_SLUG_LENGTH) return result;
+
+  const key = stableKey ?? result;
+  const hash = slugHash(key);
+  const maxBase = MAX_DOCUMENT_SLUG_LENGTH - hash.length - 1;
+  const base = result.slice(0, maxBase).replace(/-$/, "");
+  return `${base}-${hash}`;
+}
+
+export function isStaticBuildableSlug(slug: string): boolean {
+  return (
+    slug.length <= MAX_DOCUMENT_SLUG_LENGTH &&
+    !slug.includes("/")
+  );
 }
 
 /**

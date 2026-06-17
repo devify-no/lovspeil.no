@@ -9,6 +9,7 @@ import {
   cleanDocumentTitle,
   normalizeAlias,
   parseLovdataDate,
+  MAX_DOCUMENT_SLUG_LENGTH,
 } from "@/lib/lovdata/slug";
 
 describe("slugify", () => {
@@ -83,6 +84,18 @@ describe("generateDocumentSlug", () => {
       new Set()
     );
     expect(villrein).toBe("kvalitetsnorm-for-villrein");
+  });
+
+  it("truncates slugs that exceed filesystem limits", () => {
+    const longTitle =
+      "Forskrift om gjennomføring i norsk rett av forordning " +
+      "med et ekstremt langt navn som ellers ville overskride filsystemets grenser";
+    const slug = generateDocumentSlug(
+      longTitle,
+      "forskrift/2020-01-01-1",
+      new Set()
+    );
+    expect(slug.length).toBeLessThanOrEqual(MAX_DOCUMENT_SLUG_LENGTH);
   });
 });
 

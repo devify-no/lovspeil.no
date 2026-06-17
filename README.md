@@ -61,7 +61,7 @@ npm run db:generate
 npm run db:migrate
 ```
 
-The app auto-detects Neon URLs (`*.neon.tech`) and uses the `@neondatabase/serverless` driver. Local Docker Postgres continues to use `postgres.js`.
+The app connects to Neon via `postgres.js` with SSL. Use the **pooled** connection string from the Neon dashboard for serverless hosting; for long imports (`npm run import:xml`), the direct (non-pooler) URL is often faster.
 
 **Uten Docker (lokal Postgres):**
 

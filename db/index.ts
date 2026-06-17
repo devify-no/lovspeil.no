@@ -3,7 +3,8 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 const connectionString =
-  process.env.DATABASE_URL ?? "postgres://localhost:5432/lovspeil";
+  process.env.DATABASE_URL ??
+  "postgres://lovspeil:lovspeil@localhost:5432/lovspeil";
 
 function createDb() {
   const client = postgres(connectionString, { max: 10, connect_timeout: 5 });

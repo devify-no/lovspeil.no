@@ -36,11 +36,21 @@ cp .env.example .env
 
 ### Database
 
-```bash
-# Opprett database
-createdb lovspeil
+**Docker (anbefalt):**
 
-# Push schema til database
+```bash
+npm run db:setup    # start Postgres + push schema
+# eller step-by-step:
+npm run db:up       # docker compose up -d
+npm run db:push     # apply schema
+```
+
+Connection string: `postgres://lovspeil:lovspeil@localhost:5432/lovspeil`
+
+**Uten Docker:**
+
+```bash
+createdb lovspeil
 npm run db:push
 ```
 
@@ -82,6 +92,10 @@ npm run dev
 | `npm run import:xml` | Importer XML/HTML fra `/data` |
 | `npm run build:references` | Bygg kryssreferanse-indeks |
 | `npm run sync:lovdata` | (Fremtidig) Synkroniser fra Lovdata API |
+| `npm run db:up` | Start PostgreSQL via Docker |
+| `npm run db:down` | Stop PostgreSQL container |
+| `npm run db:reset` | Wipe and restart database |
+| `npm run db:setup` | Start DB + push schema |
 | `npm run db:push` | Push database-schema |
 | `npm run test` | Kjør tester |
 

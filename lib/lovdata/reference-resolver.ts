@@ -1,4 +1,4 @@
-import type { ReferenceType, ResolvedReference } from "@/types/legal";
+import type { ResolvedReference } from "@/types/legal";
 import { normalizeAlias, normalizeSectionNumber } from "./slug";
 
 export interface DocumentLookupEntry {
@@ -42,10 +42,6 @@ const SAME_DOC_SECTION_RE =
 // External reference with law name + section: "aksjeloven § 3-1", "forvaltningsloven § 11"
 const EXTERNAL_WITH_SECTION_RE =
   /((?:lov(?:en)?(?:\s+om\s+[^§]+?)?|forskrift(?:en)?(?:\s+(?:om|til)\s+[^§]+?)?|[a-zæøå\-]+loven|[a-zæøå\-]+forskriften))\s+§§?\s*(\d+(?:\s*-\s*\d+)?(?:\s*[a-z])?)/gi;
-
-// External document only: "aksjeloven", "lov om aksjeselskaper"
-const EXTERNAL_DOC_RE =
-  /(?:^|[\s(,;])((?:lov(?:en)?\s+om\s+[a-zæøå0-9\s\-]+(?:loven|lova)?)|(?:[a-zæøå\-]+loven)|(?:[a-zæøå\-]+lova)|(?:[a-zæøå\-]+forskriften))(?:[\s,)])?/gi;
 
 export function parseSectionNumbersFromMatch(match: string): string[] {
   const numbers: string[] = [];
@@ -216,8 +212,6 @@ export function resolveExplicitLink(
     /^(lov|forskrift)\/(\d{4}-\d{2}-\d{2}-\d+)\/§(.+)$/
   );
   if (sectionMatch) {
-    const docKey = `${sectionMatch[1]}/${sectionMatch[2]}-${sectionMatch[3].split("/")[0]}`;
-    const fullKey = `${sectionMatch[1]}/${sectionMatch[2]}-${sectionMatch[3].split("-")[0]}`;
     const doc2 =
       context.documentsByKey.get(`${sectionMatch[1]}/${sectionMatch[2]}-${sectionMatch[3].split("/")[0]}`) ??
       context.documentsByKey.get(lovdataPath.split("/§")[0]);

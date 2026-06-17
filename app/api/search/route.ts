@@ -35,8 +35,6 @@ export async function GET(request: NextRequest) {
       aliasesByNormalized.set(a.normalizedAlias, existing);
     }
 
-    const documentsById = new Map(documents.map((d) => [d.id, d]));
-    const documentsByKey = new Map(documents.map((d) => [d.documentKey, d]));
     const nodesByDocumentAndSection = new Map<string, Map<string, { id: string; documentId: string; normalizedSectionNumber: string | null; anchor: string; slugPath: string | null }>>();
 
     const allNodes = await db.select().from(schema.legalNodes);

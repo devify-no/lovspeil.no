@@ -56,8 +56,7 @@ export function parseDirectJumpQuery(query: string): {
 
 export async function tryDirectJump(
   query: string,
-  context: ReferenceContext,
-  documentsById: Map<string, { slug: string; type: DocumentType; title: string }>
+  context: ReferenceContext
 ): Promise<DirectJumpResult | null> {
   const { lawRef, section } = parseDirectJumpQuery(query);
   if (!lawRef) return null;

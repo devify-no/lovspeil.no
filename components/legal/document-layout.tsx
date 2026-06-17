@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { TocEntry } from "@/types/legal";
 import type { DocumentType } from "@/types/legal";
 import { TableOfContents } from "./table-of-contents";
@@ -16,6 +16,7 @@ function flattenToc(entries: TocEntry[]): TocEntry[] {
 
 function useScrollSpy(sectionIds: string[]) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const sectionIdsKey = useMemo(() => sectionIds.join("|"), [sectionIds]);
 
   useEffect(() => {
     if (sectionIds.length === 0) return;
@@ -42,7 +43,7 @@ function useScrollSpy(sectionIds: string[]) {
     for (const el of elements) observer.observe(el);
 
     return () => observer.disconnect();
-  }, [sectionIds.join("|")]);
+  }, [sectionIds, sectionIdsKey]);
 
   return activeId;
 }

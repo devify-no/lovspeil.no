@@ -254,7 +254,7 @@ export function parseLovdataHtml(
   const $ = cheerio.load(htmlContent);
   const metaPartial = extractMetadata($);
   const title = metaPartial.title ?? "Ukjent dokument";
-  const { mainTitle, shortTitle, abbreviation } = extractShortTitle(title);
+  const { shortTitle, abbreviation } = extractShortTitle(title);
 
   const filename = options.filePath.split("/").pop() ?? "";
   const documentKey =
@@ -311,15 +311,12 @@ export function parseLovdataHtml(
   return { meta, nodes, explicitLinks };
 }
 
-export function flattenNodes(
-  nodes: ParsedLegalNode[],
-  parentSlugPath: string | null = null
-): ParsedLegalNode[] {
+export function flattenNodes(nodes: ParsedLegalNode[]): ParsedLegalNode[] {
   const result: ParsedLegalNode[] = [];
   for (const node of nodes) {
     result.push(node);
     if (node.children.length > 0) {
-      result.push(...flattenNodes(node.children, node.slugPath));
+      result.push(...flattenNodes(node.children));
     }
   }
   return result;

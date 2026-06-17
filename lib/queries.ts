@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { eq, asc, and, ilike, sql } from "drizzle-orm";
+import { eq, asc, and, sql } from "drizzle-orm";
 import type { LegalDocument, LegalNode } from "@/db/schema";
 import type { TocEntry } from "@/types/legal";
 import {

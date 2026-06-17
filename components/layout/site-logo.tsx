@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 interface SiteLogoProps {
   className?: string;
@@ -8,7 +9,7 @@ interface SiteLogoProps {
 export function SiteLogo({ className = "", iconClassName = "h-7 w-7" }: SiteLogoProps) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <img
+      <Image
         src="/favicon.svg"
         alt=""
         width={28}

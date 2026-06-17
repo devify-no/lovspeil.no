@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SiteLogoLink } from "@/components/layout/site-logo";
 
 export function SiteHeader() {
@@ -74,7 +75,7 @@ export function SiteFooter() {
             rel="noopener noreferrer"
             target="_blank"
           >
-            <img
+            <Image
               src="/devify/logo.svg"
               alt=""
               width={20}

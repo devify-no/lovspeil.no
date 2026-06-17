@@ -5,7 +5,10 @@ import {
   generateDocumentSlug,
   extractShortTitle,
   buildDocumentUrl,
+  canonicalDocumentKey,
+  cleanDocumentTitle,
   normalizeAlias,
+  parseLovdataDate,
 } from "@/lib/lovdata/slug";
 
 describe("slugify", () => {
@@ -53,6 +56,34 @@ describe("generateDocumentSlug", () => {
     expect(slug).not.toBe("aksjeloven");
     expect(slug).toContain("aksjeloven");
   });
+
+  it("never embeds path separators from legacy sf/ keys", () => {
+    const slug = generateDocumentSlug(
+      "Forskrift om forurensning og avfall på Svalbard",
+      "sf/forskrift/2020-07-03-1517",
+      new Set(["forskrift-om-forurensning-og-avfall-pa-svalbard"])
+    );
+    expect(slug).not.toContain("/");
+    expect(slug).toBe(
+      "forskrift-om-forurensning-og-avfall-pa-svalbard-2020-07-03-1517"
+    );
+  });
+
+  it("handles HTML tags in scientific names", () => {
+    const erwinia = generateDocumentSlug(
+      "Forskrift om kontrollområder for å forebygge, begrense og bekjempe pærebrann (<i>Erwinia amylovora</i>)",
+      "forskrift/2020-01-08-51",
+      new Set()
+    );
+    expect(erwinia).toBe("erwinia-amylovora");
+
+    const villrein = generateDocumentSlug(
+      "Kvalitetsnorm for villrein (<i>Rangifer tarandus</i>)",
+      "forskrift/2020-06-23-1298",
+      new Set()
+    );
+    expect(villrein).toBe("kvalitetsnorm-for-villrein");
+  });
 });
 
 describe("normalizeSectionNumber", () => {
@@ -66,6 +97,52 @@ describe("normalizeSectionNumber", () => {
   it("returns null for empty input", () => {
     expect(normalizeSectionNumber(null)).toBeNull();
     expect(normalizeSectionNumber("")).toBeNull();
+  });
+
+  it("ignores chapter data-name markers", () => {
+    expect(normalizeSectionNumber("kap1")).toBeNull();
+    expect(normalizeSectionNumber("kapI")).toBeNull();
+    expect(normalizeSectionNumber("KAPITTEL_1")).toBeNull();
+  });
+});
+
+describe("parseLovdataDate", () => {
+  it("parses ISO dates", () => {
+    expect(parseLovdataDate("2024-06-12")?.toISOString().slice(0, 10)).toBe(
+      "2024-06-12"
+    );
+  });
+
+  it("extracts date from parenthetical notes", () => {
+    expect(parseLovdataDate("§ 12 nr. 4 (2008-01-21)")?.toISOString().slice(0, 10)).toBe(
+      "2008-01-21"
+    );
+  });
+
+  it("returns null for free-text lastupdated", () => {
+    expect(parseLovdataDate("Justering av tittel jf. LT-kunngj.")).toBeNull();
+  });
+});
+
+describe("cleanDocumentTitle", () => {
+  it("strips html tags from titles", () => {
+    expect(
+      cleanDocumentTitle(
+        "Kvalitetsnorm for villrein (<i>Rangifer tarandus</i>)"
+      )
+    ).toBe("Kvalitetsnorm for villrein (Rangifer tarandus)");
+  });
+});
+
+describe("canonicalDocumentKey", () => {
+  it("strips SF/ prefix from forskrift keys", () => {
+    expect(canonicalDocumentKey("sf/forskrift/1997-01-10-16")).toBe(
+      "forskrift/1997-01-10-16"
+    );
+  });
+
+  it("leaves lov keys unchanged", () => {
+    expect(canonicalDocumentKey("lov/1997-06-13-44")).toBe("lov/1997-06-13-44");
   });
 });
 

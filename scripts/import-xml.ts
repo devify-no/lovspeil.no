@@ -5,10 +5,98 @@
 import { readdirSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { db, schema } from "../db";
-import { parseLovdataHtml, flattenNodes } from "../lib/lovdata/parser";
-import { eq } from "drizzle-orm";
+import { parseLovdataHtml } from "../lib/lovdata/parser";
+import {
+  canonicalDocumentKey,
+  cleanDocumentTitle,
+  extractShortTitle,
+  generateDocumentSlug,
+} from "../lib/lovdata/slug";
+import { eq, or, sql } from "drizzle-orm";
 
 const DATA_DIR = join(process.cwd(), "data");
+
+/** Fix document keys and slugs imported before canonical key normalization. */
+async function migrateLegacyDocumentKeys() {
+  const legacy = await db
+    .select()
+    .from(schema.legalDocuments)
+    .where(
+      or(
+        sql`${schema.legalDocuments.documentKey} LIKE 'sf/%'`,
+        sql`${schema.legalDocuments.slug} LIKE '%/%'`
+      )
+    );
+
+  if (legacy.length === 0) return;
+
+  console.log(`Migrating ${legacy.length} documents with legacy keys/slugs...`);
+
+  const reservedSlugs = new Set(
+    (
+      await db
+        .select({ slug: schema.legalDocuments.slug })
+        .from(schema.legalDocuments)
+    )
+      .map((d) => d.slug)
+      .filter((slug) => !slug.includes("/"))
+  );
+
+  for (const doc of legacy) {
+    reservedSlugs.delete(doc.slug);
+    const canonicalKey = canonicalDocumentKey(doc.documentKey);
+    const slug = generateDocumentSlug(doc.title, canonicalKey, reservedSlugs);
+    reservedSlugs.add(slug);
+
+    await db
+      .update(schema.legalDocuments)
+      .set({ documentKey: canonicalKey, slug })
+      .where(eq(schema.legalDocuments.id, doc.id));
+  }
+}
+
+/** Fix titles and slugs broken by HTML tags (e.g. `<i>Erwinia amylovora</i>`) in titles. */
+async function migrateHtmlTitlesAndSlugs() {
+  const affected = await db
+    .select()
+    .from(schema.legalDocuments)
+    .where(sql`${schema.legalDocuments.title} LIKE '%<%'`);
+
+  if (affected.length === 0) return;
+
+  console.log(`Fixing ${affected.length} documents with HTML in titles...`);
+
+  const reservedSlugs = new Set(
+    (
+      await db
+        .select({ slug: schema.legalDocuments.slug })
+        .from(schema.legalDocuments)
+    )
+      .map((d) => d.slug)
+      .filter((slug) => !slug.includes("/"))
+  );
+
+  for (const doc of affected) {
+    reservedSlugs.delete(doc.slug);
+    const title = cleanDocumentTitle(doc.title);
+    const { shortTitle } = extractShortTitle(title);
+    const slug = generateDocumentSlug(
+      title,
+      canonicalDocumentKey(doc.documentKey),
+      reservedSlugs
+    );
+    reservedSlugs.add(slug);
+
+    await db
+      .update(schema.legalDocuments)
+      .set({
+        title,
+        shortTitle: shortTitle ?? doc.shortTitle,
+        slug,
+      })
+      .where(eq(schema.legalDocuments.id, doc.id));
+  }
+}
 
 async function importSourceType(sourceType: "nl" | "sf") {
   const dir = join(DATA_DIR, sourceType);
@@ -20,8 +108,12 @@ async function importSourceType(sourceType: "nl" | "sf") {
   const files = readdirSync(dir).filter((f) => f.endsWith(".xml"));
   console.log(`Importing ${files.length} files from ${sourceType}/...`);
 
-  const existingDocs = await db.select({ slug: schema.legalDocuments.slug }).from(schema.legalDocuments);
-  const existingSlugs = new Set(existingDocs.map((d) => d.slug));
+  const existingDocs = await db
+    .select({ slug: schema.legalDocuments.slug })
+    .from(schema.legalDocuments);
+  const existingSlugs = new Set(
+    existingDocs.map((d) => d.slug).filter((slug) => !slug.includes("/"))
+  );
 
   let imported = 0;
   let errors = 0;
@@ -128,6 +220,9 @@ async function importSourceType(sourceType: "nl" | "sf") {
 }
 
 async function main() {
+  await migrateLegacyDocumentKeys();
+  await migrateHtmlTitlesAndSlugs();
+
   const arg = process.argv[2];
   if (arg === "nl" || arg === "sf") {
     await importSourceType(arg);

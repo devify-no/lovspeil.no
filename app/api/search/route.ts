@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import { buildAliasIndex } from "@/lib/lovdata/alias-index";
 import type { ReferenceContext } from "@/lib/lovdata/reference-resolver";
 import { findDocumentByAlias } from "@/lib/lovdata/reference-resolver";
-import { buildDocumentUrl } from "@/lib/lovdata/slug";
+import { buildDocumentUrl, canonicalDocumentKey } from "@/lib/lovdata/slug";
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q") ?? "";
@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
       currentDocumentSections: new Map(),
       documentsByKey: new Map(
         documents.map((d) => [
-          d.documentKey,
+          canonicalDocumentKey(d.documentKey),
           {
             id: d.id,
             slug: d.slug,
-            documentKey: d.documentKey,
+            documentKey: canonicalDocumentKey(d.documentKey),
             type: d.type as "law" | "regulation",
             title: d.title,
             shortTitle: d.shortTitle,
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
           {
             id: d.id,
             slug: d.slug,
-            documentKey: d.documentKey,
+            documentKey: canonicalDocumentKey(d.documentKey),
             type: d.type as "law" | "regulation",
             title: d.title,
             shortTitle: d.shortTitle,

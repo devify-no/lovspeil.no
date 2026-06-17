@@ -6,6 +6,7 @@ import {
   findDocumentByAlias,
   type ReferenceContext,
 } from "@/lib/lovdata/reference-resolver";
+import { canonicalDocumentKey } from "@/lib/lovdata/slug";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -48,11 +49,11 @@ export async function POST(request: NextRequest) {
     currentDocumentSections,
     documentsByKey: new Map(
       documents.map((d) => [
-        d.documentKey,
+        canonicalDocumentKey(d.documentKey),
         {
           id: d.id,
           slug: d.slug,
-          documentKey: d.documentKey,
+          documentKey: canonicalDocumentKey(d.documentKey),
           type: d.type as "law" | "regulation",
           title: d.title,
           shortTitle: d.shortTitle,
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         {
           id: d.id,
           slug: d.slug,
-          documentKey: d.documentKey,
+          documentKey: canonicalDocumentKey(d.documentKey),
           type: d.type as "law" | "regulation",
           title: d.title,
           shortTitle: d.shortTitle,
@@ -102,11 +103,11 @@ export async function GET(request: NextRequest) {
     currentDocumentSections: new Map(),
     documentsByKey: new Map(
       documents.map((d) => [
-        d.documentKey,
+        canonicalDocumentKey(d.documentKey),
         {
           id: d.id,
           slug: d.slug,
-          documentKey: d.documentKey,
+          documentKey: canonicalDocumentKey(d.documentKey),
           type: d.type as "law" | "regulation",
           title: d.title,
           shortTitle: d.shortTitle,
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
         {
           id: d.id,
           slug: d.slug,
-          documentKey: d.documentKey,
+          documentKey: canonicalDocumentKey(d.documentKey),
           type: d.type as "law" | "regulation",
           title: d.title,
           shortTitle: d.shortTitle,

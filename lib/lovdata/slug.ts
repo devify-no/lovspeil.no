@@ -26,6 +26,17 @@ export function slugify(text: string): string {
 }
 
 /**
+ * Remove HTML markup accidentally stored as plain text in Lovdata titles.
+ */
+export function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]+>/g, "");
+}
+
+export function cleanDocumentTitle(title: string): string {
+  return stripHtmlTags(title).replace(/\s+/g, " ").trim();
+}
+
+/**
  * Extract short title from Lovdata title patterns:
  * - "Lov om aksjeselskaper (aksjeloven)"
  * - "Lov om petroleumsvirksomhet [petroleumsloven]"
@@ -36,7 +47,8 @@ export function extractShortTitle(title: string): {
   shortTitle: string | null;
   abbreviation: string | null;
 } {
-  const parenMatch = title.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+  const cleaned = cleanDocumentTitle(title);
+  const parenMatch = cleaned.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
   if (parenMatch) {
     return {
       mainTitle: parenMatch[1].trim(),
@@ -45,7 +57,7 @@ export function extractShortTitle(title: string): {
     };
   }
 
-  const bracketMatch = title.match(/^(.+?)\s*\[([^\]]+)\]\s*$/);
+  const bracketMatch = cleaned.match(/^(.+?)\s*\[([^\]]+)\]\s*$/);
   if (bracketMatch) {
     return {
       mainTitle: bracketMatch[1].trim(),
@@ -54,7 +66,11 @@ export function extractShortTitle(title: string): {
     };
   }
 
-  return { mainTitle: title.trim(), shortTitle: null, abbreviation: null };
+  return { mainTitle: cleaned.trim(), shortTitle: null, abbreviation: null };
+}
+
+function isLatinSpeciesName(text: string): boolean {
+  return /^[A-Z][a-z]+(?: [a-z]+)+$/.test(text.trim());
 }
 
 /**
@@ -67,14 +83,18 @@ export function generateDocumentSlug(
   existingSlugs: Set<string>
 ): string {
   const { mainTitle, shortTitle } = extractShortTitle(title);
+  const canonicalKey = canonicalDocumentKey(documentKey);
 
   const candidates: string[] = [];
-  if (shortTitle) {
+  const speciesInParens = shortTitle && isLatinSpeciesName(shortTitle);
+  const isForskriftOm = /^forskrift om\s+/i.test(mainTitle);
+
+  if (shortTitle && !(speciesInParens && !isForskriftOm)) {
     candidates.push(slugify(shortTitle));
   }
+
   candidates.push(slugify(mainTitle));
 
-  // Remove generic prefixes for fallback
   const withoutPrefix = mainTitle
     .replace(/^lov om\s+/i, "")
     .replace(/^forskrift til\s+/i, "")
@@ -83,22 +103,73 @@ export function generateDocumentSlug(
     candidates.push(slugify(withoutPrefix));
   }
 
-  const keySuffix = documentKey.replace(/^lov\//, "").replace(/^forskrift\//, "");
+  if (speciesInParens && !isForskriftOm && shortTitle) {
+    candidates.push(slugify(shortTitle));
+  }
+
+  const keySuffix = canonicalKey.replace(/^lov\//, "").replace(/^forskrift\//, "");
 
   for (const candidate of candidates) {
     if (!candidate) continue;
     if (!existingSlugs.has(candidate)) {
-      return candidate;
+      return finalizeDocumentSlug(candidate);
     }
-    // Try appending key suffix before falling back to next candidate
     const withKey = `${candidate}-${keySuffix}`;
     if (!existingSlugs.has(withKey)) {
-      return withKey;
+      return finalizeDocumentSlug(withKey);
     }
   }
 
   const base = candidates.find(Boolean) ?? "dokument";
-  return `${base}-${documentKey.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
+  return finalizeDocumentSlug(`${base}-${keySuffix}`);
+}
+
+/** Slugs must never contain path separators. */
+export function finalizeDocumentSlug(slug: string): string {
+  return slug
+    .replace(/\//g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Parse a Lovdata date field safely. The `lastupdated` field is often free text,
+ * not a single ISO date – return null rather than an invalid Date.
+ */
+export function parseLovdataDate(text: string | null | undefined): Date | null {
+  if (!text?.trim()) return null;
+
+  const trimmed = text.trim();
+
+  // Direct ISO date
+  const isoMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) {
+    const d = new Date(isoMatch[1]);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  // Norwegian dd.mm.yyyy anywhere in the string
+  const noMatch = trimmed.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if (noMatch) {
+    const d = new Date(`${noMatch[3]}-${noMatch[2]}-${noMatch[1]}`);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  // ISO date in parentheses, e.g. "§ 12 nr. 4 (2008-01-21)"
+  const parenMatch = trimmed.match(/\((\d{4}-\d{2}-\d{2})\)/);
+  if (parenMatch) {
+    const d = new Date(parenMatch[1]);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  // Leading ISO before parenthetical note, e.g. "2002-12-16 (§ 10)"
+  const leadingIso = trimmed.match(/^(\d{4}-\d{2}-\d{2})\s*\(/);
+  if (leadingIso) {
+    const d = new Date(leadingIso[1]);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+
+  return null;
 }
 
 /**
@@ -107,6 +178,9 @@ export function generateDocumentSlug(
  */
 export function normalizeSectionNumber(dataName: string | null): string | null {
   if (!dataName) return null;
+
+  // Chapter markers from Lovdata data-name, not § references
+  if (/^kap/i.test(dataName) || /^KAPITTEL/i.test(dataName)) return null;
 
   const cleaned = dataName
     .replace(/^§\s*/i, "")
@@ -127,7 +201,15 @@ export function sectionToSlugPath(sectionNumber: string): string {
 }
 
 /**
- * Parse document key from filename: nl-19970613-044.xml -> nl/1997-06-13-44
+ * Canonical Lovdata document key used in hrefs: lov/… or forskrift/…
+ * Strips NL/ or SF/ prefix from stored dokid values.
+ */
+export function canonicalDocumentKey(documentKey: string): string {
+  return documentKey.replace(/^(?:nl|sf)\//i, "");
+}
+
+/**
+ * Parse document key from filename: nl-19970613-044.xml -> lov/1997-06-13-44
  */
 export function parseDocumentKeyFromFilename(
   filename: string,

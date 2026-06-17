@@ -4,12 +4,16 @@ import {
   getDocumentBySlug,
   getDocumentNodes,
   buildToc,
+  getDocumentLinkIndex,
 } from "@/lib/queries";
 import { buildDocumentUrl } from "@/lib/lovdata/slug";
-import { Breadcrumbs, DocumentMetadata } from "@/components/legal/document-metadata";
-import { TableOfContents } from "@/components/legal/table-of-contents";
+import { absoluteUrl } from "@/lib/seo/site";
+import {
+  Breadcrumbs,
+  DocumentMetadata,
+} from "@/components/legal/document-metadata";
+import { DocumentLayout } from "@/components/legal/document-layout";
 import { LegalContent } from "@/components/legal/legal-content";
-import { DisclaimerBanner } from "@/components/layout/site-chrome";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -17,17 +21,26 @@ interface PageProps {
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const doc = await getDocumentBySlug(slug);
   if (!doc || doc.type !== "regulation") return { title: "Ikke funnet" };
 
   const title = doc.shortTitle ?? doc.title;
+  const canonical = buildDocumentUrl("regulation", doc.slug);
   return {
     title: title.charAt(0).toUpperCase() + title.slice(1),
     description: `Les ${doc.title} på Lovspeil.`,
     alternates: {
-      canonical: buildDocumentUrl("regulation", doc.slug),
+      canonical,
+    },
+    openGraph: {
+      title: `${title} – Lovspeil`,
+      description: doc.title,
+      url: absoluteUrl(canonical),
+      type: "article",
     },
   };
 }
@@ -41,6 +54,7 @@ export default async function ForskriftPage({ params }: PageProps) {
 
   const nodes = await getDocumentNodes(doc.id);
   const toc = buildToc(nodes);
+  const linkIndex = await getDocumentLinkIndex();
   const displayTitle = doc.shortTitle ?? doc.title;
 
   return (
@@ -52,30 +66,20 @@ export default async function ForskriftPage({ params }: PageProps) {
         ]}
       />
 
-      <div className="mb-6">
-        <DisclaimerBanner />
-      </div>
+      <DocumentLayout
+        entries={toc}
+        documentSlug={doc.slug}
+        documentType="regulation"
+      >
+        <header className="mb-8">
+          <h1 className="mb-4 text-3xl font-bold text-stone-900">
+            {doc.title}
+          </h1>
+          <DocumentMetadata document={doc} />
+        </header>
 
-      <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-10">
-        <aside className="hidden lg:block">
-          <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
-            <TableOfContents
-              entries={toc}
-              documentSlug={doc.slug}
-              documentType="regulation"
-            />
-          </div>
-        </aside>
-
-        <div className="min-w-0">
-          <header className="mb-8">
-            <h1 className="mb-4 text-3xl font-bold text-stone-900">{doc.title}</h1>
-            <DocumentMetadata document={doc} />
-          </header>
-
-          <LegalContent nodes={nodes} />
-        </div>
-      </div>
+        <LegalContent nodes={nodes} linkIndex={linkIndex} />
+      </DocumentLayout>
     </div>
   );
 }

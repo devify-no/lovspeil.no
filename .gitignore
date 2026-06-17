@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+coverage/
+drizzle/meta/
+tsconfig.tsbuildinfo
+
+# Large Lovdata XML/HTML dumps – import locally from /data/nl and /data/sf
+data/nl/
+data/sf/
+!data/manual-aliases.json

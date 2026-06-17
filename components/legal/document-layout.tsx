@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { TocEntry } from "@/types/legal";
 import type { DocumentType } from "@/types/legal";
-import { TableOfContents } from "./table-of-contents";
+import { LegalTableOfContents } from "@/components/legal/legal-table-of-contents";
 
 function flattenToc(entries: TocEntry[]): TocEntry[] {
   const result: TocEntry[] = [];
@@ -65,11 +65,9 @@ export function DocumentLayout({
 }: DocumentLayoutProps) {
   const flat = flattenToc(entries);
   const scrollTargets = flat.map((e) => e.anchor);
-
   const activeAnchor = useScrollSpy(scrollTargets);
   const tocRef = useRef<HTMLDivElement>(null);
 
-  // Keep active TOC item centered in the sidebar (scroll container only)
   useEffect(() => {
     if (!activeAnchor || !tocRef.current) return;
     const container = tocRef.current;
@@ -93,7 +91,7 @@ export function DocumentLayout({
           ref={tocRef}
           className="toc-scroll sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto"
         >
-          <TableOfContents
+          <LegalTableOfContents
             entries={entries}
             documentSlug={documentSlug}
             documentType={documentType}

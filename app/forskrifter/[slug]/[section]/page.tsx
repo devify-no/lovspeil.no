@@ -7,15 +7,12 @@ import {
   buildToc,
   getAdjacentSections,
   getDocumentLinkIndex,
+  getSectionChapterContext,
+  getOutgoingReferences,
+  getIncomingReferences,
 } from "@/lib/queries";
-import { buildDocumentUrl } from "@/lib/lovdata/slug";
-import { Breadcrumbs } from "@/components/legal/document-metadata";
-import {
-  SectionNavigation,
-  CopyLinkButton,
-} from "@/components/legal/table-of-contents";
-import { DocumentLayout } from "@/components/legal/document-layout";
-import { SectionContent } from "@/components/legal/legal-content";
+import { generateSectionMetadata } from "@/lib/seo/metadata";
+import { SectionPage } from "@/components/legal/document-page";
 
 interface PageProps {
   params: Promise<{ slug: string; section: string }>;
@@ -29,19 +26,11 @@ export async function generateMetadata({
   if (!doc || doc.type !== "regulation") return { title: "Ikke funnet" };
 
   const node = await getSectionBySlugPath(doc.id, section);
-  const name = doc.shortTitle ?? doc.title;
-  const sectionLabel = node?.number ?? `§ ${section}`;
+  if (!node) return { title: "Ikke funnet" };
 
-  return {
-    title: `${name} ${sectionLabel}`,
-    description: `Les ${sectionLabel} i ${doc.title}.`,
-    alternates: {
-      canonical: buildDocumentUrl("regulation", doc.slug, section),
-    },
-  };
+  return generateSectionMetadata(doc, node, "regulation", section);
 }
 
-/** On-demand ISR – sections are listed in sitemap but not pre-rendered at build. */
 export const revalidate = 3600;
 
 export default async function ForskriftSectionPage({ params }: PageProps) {
@@ -56,60 +45,24 @@ export default async function ForskriftSectionPage({ params }: PageProps) {
   const toc = buildToc(nodes);
   const linkIndex = await getDocumentLinkIndex();
   const { prev, next } = getAdjacentSections(nodes, section);
-  const displayTitle = doc.shortTitle ?? doc.title;
+  const chapter = getSectionChapterContext(nodes, node.id);
+  const outgoingReferences = await getOutgoingReferences(node.id);
+  const incomingReferences = await getIncomingReferences(node.id);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <Breadcrumbs
-        items={[
-          { label: "Forskrifter", href: "/forskrifter" },
-          {
-            label: displayTitle,
-            href: buildDocumentUrl("regulation", doc.slug),
-          },
-          { label: node.number ?? `§ ${section}` },
-        ]}
-      />
-
-      <DocumentLayout
-        entries={toc}
-        documentSlug={doc.slug}
-        documentType="regulation"
-        activeSlugPath={section}
-      >
-        <div className="mb-4 flex justify-end">
-          <CopyLinkButton anchor={node.anchor} />
-        </div>
-
-        <SectionContent
-          node={node}
-          lovdataUrl={node.lovdataUrl}
-          linkIndex={linkIndex}
-        />
-
-        <SectionNavigation
-          prev={
-            prev
-              ? {
-                  slugPath: prev.slugPath!,
-                  title: prev.title,
-                  number: prev.number,
-                }
-              : null
-          }
-          next={
-            next
-              ? {
-                  slugPath: next.slugPath!,
-                  title: next.title,
-                  number: next.number,
-                }
-              : null
-          }
-          documentSlug={doc.slug}
-          documentType="regulation"
-        />
-      </DocumentLayout>
-    </div>
+    <SectionPage
+      doc={doc}
+      node={node}
+      nodes={nodes}
+      toc={toc}
+      linkIndex={linkIndex}
+      documentType="regulation"
+      sectionSlug={section}
+      prev={prev}
+      next={next}
+      chapter={chapter}
+      outgoingReferences={outgoingReferences}
+      incomingReferences={incomingReferences}
+    />
   );
 }

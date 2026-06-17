@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getAllDocuments } from "@/lib/queries";
-import { buildDocumentUrl } from "@/lib/lovdata/slug";
 import { pageMetadata } from "@/lib/seo/site";
+import { DocumentIndex } from "@/components/legal/document-index";
 
 export const metadata: Metadata = pageMetadata({
   title: "Forskrifter",
   description:
-    "Oversikt over sentrale norske forskrifter på Lovspeil – leservennlig visning med klikkbare paragrafer.",
+    "Oversikt over sentrale norske forskrifter på Lovspeil – gratis, uoffisiell og brukervennlig visning med paragrafer og stabile lenker.",
   path: "/forskrifter",
 });
 
@@ -16,23 +15,15 @@ export const revalidate = 3600;
 export default async function ForskrifterPage() {
   const documents = await getAllDocuments("regulation");
 
-  const grouped = documents.reduce<Record<string, typeof documents>>(
-    (acc, doc) => {
-      const letter = (doc.shortTitle ?? doc.title).charAt(0).toUpperCase();
-      const key = /[A-ZÆØÅ]/i.test(letter) ? letter : "#";
-      acc[key] = acc[key] ?? [];
-      acc[key].push(doc);
-      return acc;
-    },
-    {},
-  );
-
-  const letters = Object.keys(grouped).sort();
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="mb-2 text-3xl font-bold">Forskrifter</h1>
-      <p className="mb-6 text-stone-600">
+      <p className="mb-2 text-stone-600">
+        Lovspeil er en gratis og uoffisiell visning av sentrale norske
+        forskrifter. Lovdata er autoritativ kilde. Her finner du forskrifter med
+        kapitler, paragrafer og stabile lenker til hver bestemmelse.
+      </p>
+      <p className="mb-6 text-sm text-stone-500">
         {documents.length} forskrifter tilgjengelig
       </p>
 
@@ -42,30 +33,18 @@ export default async function ForskrifterPage() {
           <code>npm run import:xml sf</code> for å importere data.
         </p>
       ) : (
-        <div className="space-y-8">
-          {letters.map((letter) => (
-            <section key={letter}>
-              <h2 className="mb-3 border-b border-stone-200 pb-1 text-lg font-semibold text-stone-400">
-                {letter}
-              </h2>
-              <ul className="space-y-1">
-                {grouped[letter].map((doc) => (
-                  <li key={doc.id}>
-                    <Link
-                      href={buildDocumentUrl("regulation", doc.slug)}
-                      className="block rounded px-2 py-1.5 hover:bg-stone-50"
-                    >
-                      <span className="font-medium text-stone-900">
-                        {doc.shortTitle ?? doc.title}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <DocumentIndex
+          documents={documents.map((doc) => ({
+            id: doc.id,
+            slug: doc.slug,
+            title: doc.title,
+            shortTitle: doc.shortTitle,
+            date: doc.date,
+            number: doc.number,
+          }))}
+          documentType="regulation"
+        />
       )}
-    </div>
+    </main>
   );
 }

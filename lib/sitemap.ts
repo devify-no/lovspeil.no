@@ -5,6 +5,7 @@ import {
   getSectionPathsPage,
 } from "@/lib/queries";
 import { buildDocumentUrl } from "@/lib/lovdata/slug";
+import { documentLastModified } from "@/lib/seo/urls";
 import { getSiteUrl } from "@/lib/seo/site";
 
 /** Google allows max 50 000 URLs per sitemap file. */
@@ -68,13 +69,13 @@ export async function buildCoreSitemap(baseUrl: string): Promise<MetadataRoute.S
   const docPages: MetadataRoute.Sitemap = [
     ...laws.map((doc) => ({
       url: `${baseUrl}${buildDocumentUrl("law", doc.slug)}`,
-      lastModified: doc.importedAt ?? undefined,
+      lastModified: documentLastModified(doc),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),
     ...regulations.map((doc) => ({
       url: `${baseUrl}${buildDocumentUrl("regulation", doc.slug)}`,
-      lastModified: doc.importedAt ?? undefined,
+      lastModified: documentLastModified(doc),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

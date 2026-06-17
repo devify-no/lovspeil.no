@@ -6,6 +6,7 @@ import {
   formatTocLabel,
   isSubPartChapter,
 } from "@/lib/lovdata/node-display";
+import { getChapterAnchor, getSectionAnchor } from "@/lib/seo/urls";
 import { cache } from "react";
 import { isAmendmentDocument } from "@/lib/lovdata/document-classify";
 import {
@@ -185,11 +186,18 @@ export function buildToc(nodes: LegalNode[]): TocEntry[] {
         continue;
       }
 
+      const anchor =
+        node.nodeType === "chapter"
+          ? getChapterAnchor(node)
+          : node.nodeType === "section"
+            ? getSectionAnchor(node)
+            : node.anchor;
+
       entries.push({
         id: node.id,
         title: node.title ?? node.number ?? node.anchor,
         label: formatTocLabel(node),
-        anchor: node.anchor,
+        anchor,
         slugPath: node.slugPath,
         sectionNumber: node.normalizedSectionNumber,
         children: buildTree(node.id),
@@ -200,6 +208,23 @@ export function buildToc(nodes: LegalNode[]): TocEntry[] {
   }
 
   return buildTree(null);
+}
+
+export function getSectionChapterContext(
+  nodes: LegalNode[],
+  sectionId: string
+): LegalNode | null {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  let current = nodeMap.get(sectionId);
+
+  while (current) {
+    if (current.nodeType === "chapter" && !isSubPartChapter(current)) {
+      return current;
+    }
+    current = current.parentId ? nodeMap.get(current.parentId) : undefined;
+  }
+
+  return null;
 }
 
 export function getAdjacentSections(
@@ -231,7 +256,7 @@ export async function getAllSectionPaths() {
       docSlug: schema.legalDocuments.slug,
       docType: schema.legalDocuments.type,
       sectionSlug: schema.legalNodes.slugPath,
-      lastModified: schema.legalDocuments.importedAt,
+      lastModified: sql<Date>`COALESCE(${schema.legalDocuments.sourceUpdatedAt}, ${schema.legalDocuments.importedAt})`,
     })
     .from(schema.legalNodes)
     .innerJoin(
@@ -270,7 +295,7 @@ export async function getSectionPathsPage(offset: number, limit: number) {
       docSlug: schema.legalDocuments.slug,
       docType: schema.legalDocuments.type,
       sectionSlug: schema.legalNodes.slugPath,
-      lastModified: schema.legalDocuments.importedAt,
+      lastModified: sql<Date>`COALESCE(${schema.legalDocuments.sourceUpdatedAt}, ${schema.legalDocuments.importedAt})`,
     })
     .from(schema.legalNodes)
     .innerJoin(

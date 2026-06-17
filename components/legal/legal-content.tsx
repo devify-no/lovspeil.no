@@ -1,19 +1,22 @@
 import type { LegalNode } from "@/db/schema";
 import type { DocumentLinkIndex } from "@/lib/lovdata/link-resolver";
+import type { DocumentType } from "@/types/legal";
 import { enrichLinksInHtml } from "@/lib/lovdata/link-resolver";
-import {
-  formatChapterHeading,
-  formatSectionHeading,
-  headingClass,
-  headingLevel,
-  stripArticleHeader,
-} from "@/lib/lovdata/node-display";
+import { stripArticleHeader } from "@/lib/lovdata/node-display";
 import { enhanceFootnotes } from "@/lib/lovdata/footnotes";
+import {
+  getChapterAnchor,
+  getChapterShareUrl,
+  getSectionAnchor,
+  getSectionCanonicalUrl,
+} from "@/lib/seo/urls";
+import { LegalChapter } from "@/components/legal/legal-chapter";
+import { LegalSection } from "@/components/legal/legal-section";
 
 interface LegalContentProps {
   nodes: LegalNode[];
-  showAll?: boolean;
-  focusSectionId?: string;
+  documentSlug: string;
+  documentType: DocumentType;
   linkIndex: DocumentLinkIndex;
 }
 
@@ -30,77 +33,12 @@ function prepareHtml(
   return enrichLinksInHtml(enhanceFootnotes(body, options.anchor), linkIndex);
 }
 
-function renderHeading(
-  node: LegalNode,
-  depth: number
-): React.ReactNode {
-  const level = headingLevel(node.nodeType, depth);
-  if (!level) return null;
-
-  const text =
-    node.nodeType === "chapter"
-      ? formatChapterHeading(node, depth)
-      : formatSectionHeading(node);
-
-  if (!text) return null;
-
-  if (level === "h2") {
-    return <h2 className={headingClass.h2}>{text}</h2>;
-  }
-  if (level === "h3") {
-    return <h3 className={headingClass.h3}>{text}</h3>;
-  }
-  return <h4 className={headingClass.h4}>{text}</h4>;
-}
-
-function renderNode(
-  node: LegalNode,
-  linkIndex: DocumentLinkIndex,
-  depth = 0
-): React.ReactNode {
-  const Tag = node.nodeType === "section" ? "section" : "div";
-  const showHtml =
-    node.nodeType === "section" ||
-    (node.nodeType !== "chapter" && node.html);
-
-  return (
-    <Tag
-      key={node.id}
-      id={node.anchor}
-      className={`legal-node legal-node--${node.nodeType}`}
-    >
-      {renderHeading(node, depth)}
-      {showHtml && node.html ? (
-        <div
-          className="legal-text prose-legal text-stone-800"
-          dangerouslySetInnerHTML={{
-            __html: prepareHtml(node.html, linkIndex, {
-              stripHeader: node.nodeType === "section",
-              anchor: node.anchor,
-            }),
-          }}
-        />
-      ) : null}
-    </Tag>
-  );
-}
-
 export function LegalContent({
   nodes,
-  focusSectionId,
+  documentSlug,
+  documentType,
   linkIndex,
 }: LegalContentProps) {
-  if (focusSectionId) {
-    const focus = nodes.find((n) => n.id === focusSectionId);
-    if (focus) {
-      return (
-        <div className="legal-content">
-          {renderNode(focus, linkIndex)}
-        </div>
-      );
-    }
-  }
-
   function renderTree(
     nodeList: LegalNode[],
     parentId: string | null = null,
@@ -109,13 +47,58 @@ export function LegalContent({
     return nodeList
       .filter((n) => n.parentId === parentId)
       .sort((a, b) => a.order - b.order)
-      .map((node) => (
-        <div key={node.id}>
-          {renderNode(node, linkIndex, depth)}
-          {(node.nodeType === "chapter") &&
-            renderTree(nodeList, node.id, depth + 1)}
-        </div>
-      ));
+      .map((node) => {
+        if (node.nodeType === "chapter") {
+          const chapterAnchor = getChapterAnchor(node);
+          const chapterShareUrl = getChapterShareUrl(
+            documentType,
+            documentSlug,
+            chapterAnchor
+          );
+
+          return (
+            <LegalChapter
+              key={node.id}
+              node={node}
+              depth={depth}
+              shareUrl={chapterShareUrl}
+            >
+              {renderTree(nodeList, node.id, depth + 1)}
+            </LegalChapter>
+          );
+        }
+
+        if (node.nodeType === "section") {
+          const sectionAnchor = getSectionAnchor(node);
+          const hashShareUrl = getChapterShareUrl(
+            documentType,
+            documentSlug,
+            sectionAnchor
+          );
+          const sectionShareUrl = node.slugPath
+            ? getSectionCanonicalUrl(documentType, documentSlug, node.slugPath)
+            : hashShareUrl;
+
+          return (
+            <LegalSection
+              key={node.id}
+              node={node}
+              depth={depth}
+              documentSlug={documentSlug}
+              documentType={documentType}
+              sectionShareUrl={sectionShareUrl}
+              hashShareUrl={hashShareUrl}
+              html={prepareHtml(node.html, linkIndex, {
+                stripHeader: true,
+                anchor: sectionAnchor,
+              })}
+            />
+          );
+        }
+
+        return null;
+      })
+      .filter(Boolean);
   }
 
   return <div className="legal-content">{renderTree(nodes)}</div>;
@@ -125,26 +108,34 @@ export function SectionContent({
   node,
   lovdataUrl,
   linkIndex,
+  documentTitle,
+  sectionSlug,
 }: {
   node: LegalNode;
   lovdataUrl?: string | null;
   linkIndex: DocumentLinkIndex;
+  documentTitle: string;
+  sectionSlug: string;
 }) {
+  const sectionAnchor = getSectionAnchor(node);
+  const html = prepareHtml(node.html, linkIndex, {
+    stripHeader: true,
+    anchor: sectionAnchor,
+  });
+
+  const sectionLabel = node.number ?? `§ ${sectionSlug}`;
+  const heading = node.title
+    ? `${documentTitle} ${sectionLabel} – ${node.title}`
+    : `${documentTitle} ${sectionLabel}`;
+
   return (
     <article className="legal-section">
-      <header className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-bold text-stone-900">
-          {formatSectionHeading(node)}
-        </h1>
+      <header className="mb-4">
+        <h1 className="text-2xl font-bold text-stone-900">{heading}</h1>
       </header>
       <div
         className="legal-text prose-legal max-w-none leading-relaxed text-stone-800"
-        dangerouslySetInnerHTML={{
-          __html: prepareHtml(node.html, linkIndex, {
-            stripHeader: true,
-            anchor: node.anchor,
-          }),
-        }}
+        dangerouslySetInnerHTML={{ __html: html }}
       />
       {lovdataUrl && (
         <p className="mt-6 text-sm">

@@ -22,6 +22,7 @@
     "sync:lovdata": "tsx scripts/sync-lovdata.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "cheerio": "^1.0.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.39.3",
@@ -36,6 +37,7 @@
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.11",
     "@types/react-dom": "^19.0.4",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.22.0",
     "eslint-config-next": "^15.2.4",

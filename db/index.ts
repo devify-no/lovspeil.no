@@ -1,14 +1,21 @@
-import { drizzle } from "drizzle-orm/postgres-js";
+import "dotenv/config";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+import { neon } from "@neondatabase/serverless";
 import postgres from "postgres";
 import * as schema from "./schema";
-
-const connectionString =
-  process.env.DATABASE_URL ??
-  "postgres://lovspeil:lovspeil@localhost:5432/lovspeil";
+import { getDatabaseUrl, isNeonDatabase } from "./config";
 
 function createDb() {
+  const connectionString = getDatabaseUrl();
+
+  if (isNeonDatabase(connectionString)) {
+    const sql = neon(connectionString);
+    return drizzleNeon({ client: sql, schema });
+  }
+
   const client = postgres(connectionString, { max: 10, connect_timeout: 5 });
-  return drizzle(client, { schema });
+  return drizzlePostgres(client, { schema });
 }
 
 // Lazy singleton – avoids connection at import time during build

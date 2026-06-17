@@ -36,7 +36,7 @@ cp .env.example .env
 
 ### Database
 
-**Docker (anbefalt):**
+**Local development (Docker):**
 
 ```bash
 npm run db:setup    # start Postgres + push schema
@@ -47,7 +47,23 @@ npm run db:push     # apply schema
 
 Connection string: `postgres://lovspeil:lovspeil@localhost:5432/lovspeil`
 
-**Uten Docker:**
+**Neon Postgres (production):**
+
+1. Create a project at [console.neon.tech](https://console.neon.tech)
+2. Copy the connection string into `.env` as `DATABASE_URL`
+3. For serverless hosting (e.g. Vercel), use the **pooled** connection string from the Neon dashboard
+4. Push the schema:
+
+```bash
+npm run db:push
+# or generate and run migrations:
+npm run db:generate
+npm run db:migrate
+```
+
+The app auto-detects Neon URLs (`*.neon.tech`) and uses the `@neondatabase/serverless` driver. Local Docker Postgres continues to use `postgres.js`.
+
+**Uten Docker (lokal Postgres):**
 
 ```bash
 createdb lovspeil

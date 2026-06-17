@@ -1,0 +1,139 @@
+# Lovspeil
+
+Gratis, uoffisiell og leservennlig plattform for norske lover og sentrale forskrifter.
+
+Inspirert av [lagen.nu](https://lagen.nu) i Sverige. Data hentes fra [Lovdata](https://lovdata.no) under [NLOD 2.0](https://data.norge.no/nlod/en/2.0/).
+
+**Lovspeil er ikke offisiell.** Lovdata er autoritativ kilde. Kontroller alltid mot Lovdata ved juridisk bruk.
+
+Kildekode: [github.com/devify-no/lovspeil.no](https://github.com/devify-no/lovspeil.no)
+
+## Tech stack
+
+- **Next.js 15** (App Router, SSR/SSG)
+- **TypeScript** (strict)
+- **Tailwind CSS**
+- **PostgreSQL** + **Drizzle ORM**
+- **Cheerio** for HTML/XML parsing
+- **Vitest** for tester
+
+## Kom i gang
+
+### Forutsetninger
+
+- Node.js 20+
+- PostgreSQL 15+
+
+### Installasjon
+
+```bash
+git clone https://github.com/devify-no/lovspeil.no.git
+cd lovspeil.no
+npm install
+cp .env.example .env
+# Rediger DATABASE_URL i .env
+```
+
+### Database
+
+```bash
+# Opprett database
+createdb lovspeil
+
+# Push schema til database
+npm run db:push
+```
+
+### Importer data
+
+XML/HTML-filer fra Lovdata ligger i `/data/nl` (lover) og `/data/sf` (forskrifter).
+
+```bash
+# Importer alle lover og forskrifter
+npm run import:xml
+
+# Eller kun lover / forskrifter
+npm run import:xml nl
+npm run import:xml sf
+```
+
+### Bygg referanseindeks
+
+Etter import, bygg kryssreferanse-indeks:
+
+```bash
+npm run build:references
+```
+
+### Kjør utviklingsserver
+
+```bash
+npm run dev
+```
+
+Åpne [http://localhost:3000](http://localhost:3000).
+
+## Scripts
+
+| Script | Beskrivelse |
+|--------|-------------|
+| `npm run dev` | Start utviklingsserver |
+| `npm run build` | Bygg for produksjon |
+| `npm run import:xml` | Importer XML/HTML fra `/data` |
+| `npm run build:references` | Bygg kryssreferanse-indeks |
+| `npm run sync:lovdata` | (Fremtidig) Synkroniser fra Lovdata API |
+| `npm run db:push` | Push database-schema |
+| `npm run test` | Kjør tester |
+
+## URL-struktur
+
+| URL | Beskrivelse |
+|-----|-------------|
+| `/lover` | Oversikt over lover |
+| `/lover/aksjeloven` | Aksjeloven |
+| `/lover/aksjeloven/3-1` | Aksjeloven § 3-1 |
+| `/forskrifter` | Oversikt over forskrifter |
+| `/sok?q=...` | Søk |
+| `/om` | Om Lovspeil |
+| `/kilde-og-lisens` | Kilde og lisens |
+
+## Dataformat
+
+Filene i `/data/nl` og `/data/sf` er HTML eksportert fra Lovdata (despite `.xml` extension). Strukturen er:
+
+- `<header class="documentHeader">` – metadata (departement, dato, rettsområde)
+- `<section class="section">` – kapitler
+- `<article class="legalArticle" data-name="§1-1">` – paragrafer
+- `<a href="lov/1997-06-13-44">` – eksplisitte kryssreferanser
+
+## Referanseløser
+
+Referanseløseren jobber i tre steg:
+
+1. **Bevar XML-lenker** – Eksplisitte `<a href="lov/...">` fra Lovdata
+2. **Samme-dokument** – `§ 7`, `§§ 7 og 9`, `§ 3-1`
+3. **Eksterne lover** – `aksjeloven § 3-1`, `forvaltningsloven § 11`
+
+Alias-indeks bygges fra titler, korte navn og `/data/manual-aliases.json`.
+
+Konservativ linking: kun auto-lenke ved confidence ≥ 0.75.
+
+## SEO
+
+- Server-rendrede sider for alle lover og paragrafer
+- `sitemap.xml` med alle dokument- og paragraf-URL-er
+- `robots.txt`
+- Canonical URLs og Open Graph metadata
+- JSON-LD (WebPage, BreadcrumbList, Legislation)
+
+## Tester
+
+```bash
+npm test
+```
+
+Tester dekker slug-generering, seksjonsnormalisering, referanseløsning og XML-parsing av eksempelfiler.
+
+## Lisens
+
+Applikasjonskoden er open source. Lovdata-innhold tilgjengeliggjøres under NLOD 2.0 med attribution til Lovdata.

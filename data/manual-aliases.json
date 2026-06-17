@@ -1,0 +1,98 @@
+[
+  {
+    "slug": "aksjeloven",
+    "aliases": ["aksjeloven", "asl.", "lov om aksjeselskaper", "aksjeselskapsloven"]
+  },
+  {
+    "slug": "allmennaksjeloven",
+    "aliases": ["allmennaksjeloven", "al.", "lov om allmennaksjeselskaper"]
+  },
+  {
+    "slug": "forvaltningsloven",
+    "aliases": ["forvaltningsloven", "fvl.", "lov om behandlingsmåten i forvaltningssaker"]
+  },
+  {
+    "slug": "straffeloven",
+    "aliases": ["straffeloven", "strl.", "lov om straff"]
+  },
+  {
+    "slug": "tvisteloven",
+    "aliases": ["tvisteloven", "tvl.", "lov om mekling og rettergang i sivile tvister"]
+  },
+  {
+    "slug": "domstolloven",
+    "aliases": ["domstolloven", "domstl.", "lov om domstolene"]
+  },
+  {
+    "slug": "arveloven",
+    "aliases": ["arveloven", "arl.", "lov om arv og dødsboskapital"]
+  },
+  {
+    "slug": "konkursloven",
+    "aliases": ["konkursloven", "konk.", "lov om konkurs"]
+  },
+  {
+    "slug": "dekningsloven",
+    "aliases": ["dekningsloven", "dekningsl.", "lov om dekningsordning"]
+  },
+  {
+    "slug": "panteloven",
+    "aliases": ["panteloven", "pantel.", "lov om pant"]
+  },
+  {
+    "slug": "tinglysingsloven",
+    "aliases": ["tinglysingsloven", "tingl.", "lov om tinglysing"]
+  },
+  {
+    "slug": "selskapsloven",
+    "aliases": ["selskapsloven", "selskapsl."]
+  },
+  {
+    "slug": "skatteloven",
+    "aliases": ["skatteloven", "sktl.", "lov om skatt"]
+  },
+  {
+    "slug": "merverdiavgiftsloven",
+    "aliases": ["merverdiavgiftsloven", "mval.", "lov om merverdiavgift"]
+  },
+  {
+    "slug": "arbeidsmiljoloven",
+    "aliases": ["arbeidsmiljøloven", "arbeidsmiljoloven", "aml."]
+  },
+  {
+    "slug": "ferieloven",
+    "aliases": ["ferieloven", "feriel."]
+  },
+  {
+    "slug": "likestillings-og-diskrimineringsloven",
+    "aliases": ["likestillings- og diskrimineringsloven", "ldl."]
+  },
+  {
+    "slug": "andsverkloven",
+    "aliases": ["åndsverkloven", "andsverkloven", "åvl."]
+  },
+  {
+    "slug": "varemerkeloven",
+    "aliases": ["varemerkeloven", "vml."]
+  },
+  {
+    "slug": "foretaksnavneloven",
+    "aliases": ["foretaksnavneloven", "fnl."]
+  },
+  {
+    "slug": "foretaksregisterloven",
+    "aliases": ["foretaksregisterloven", "frl."]
+  },
+  {
+    "slug": "hvitvaskingsloven",
+    "aliases": ["hvitvaskingsloven", "hvitvaskingsl.", "lov om tiltak mot hvitvasking og terrorfinansiering"]
+  },
+  {
+    "slug": "personopplysningsloven",
+    "aliases": ["personopplysningsloven", "personopplysningsl.", "lov om behandling av personopplysninger"]
+  },
+  {
+    "slug": "offentleglova",
+    "aliases": ["offentleglova", "offl.", "lov om opptak av offentlige møter"]
+  }
+]

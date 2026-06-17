@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Kilde og lisens",
   description: "Informasjon om datakilde og lisens for Lovspeil.",
-};
+  path: "/kilde-og-lisens",
+});
 
 export default function KildeOgLisensPage() {
   return (

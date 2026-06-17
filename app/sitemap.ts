@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 import { getAllDocuments, getAllSectionPaths } from "@/lib/queries";
 import { buildDocumentUrl } from "@/lib/lovdata/slug";
+import { getSiteUrl } from "@/lib/seo/site";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lovspeil.no";
+  const baseUrl = getSiteUrl();
 
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },

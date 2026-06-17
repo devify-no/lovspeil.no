@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { SiteHeader, SiteFooter } from "@/components/layout/site-chrome";
+import {
+  absoluteUrl,
+  defaultDescription,
+  getSiteUrl,
+  siteName,
+} from "@/lib/seo/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,21 +15,49 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "Lovspeil – Norske lover og forskrifter",
-    template: "%s – Lovspeil",
+    default: `${siteName} – Norske lover og forskrifter`,
+    template: `%s – ${siteName}`,
   },
-  description:
-    "Gratis, uoffisiell og leservennlig tilgang til norske lover og sentrale forskrifter. Lovdata er autoritativ kilde.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://lovspeil.no"),
+  description: defaultDescription,
+  applicationName: siteName,
+  keywords: [
+    "lover",
+    "forskrifter",
+    "lovdata",
+    "norsk lov",
+    "paragraf",
+    "jus",
+    "Norge",
+  ],
+  authors: [{ name: "Dev AS", url: "https://www.devify.no" }],
+  creator: "Dev AS",
   openGraph: {
     type: "website",
     locale: "nb_NO",
-    siteName: "Lovspeil",
+    siteName,
+    title: `${siteName} – Norske lover og forskrifter`,
+    description: defaultDescription,
+    url: absoluteUrl("/"),
+  },
+  twitter: {
+    card: "summary",
+    title: `${siteName} – Norske lover og forskrifter`,
+    description: defaultDescription,
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+    },
+  },
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 

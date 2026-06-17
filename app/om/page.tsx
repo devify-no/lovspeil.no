@@ -15,10 +15,13 @@ export default function OmPage() {
 
       <div className="prose-legal space-y-4 text-stone-700">
         <p>
-          Lovspeil er en gratis, uoffisiell plattform for å lese norske lover og
-          sentrale forskrifter. Målet er å gjøre lovtekster enklere å navigere
-          og lese enn på Lovdata, med klikkbare kryssreferanser og rene URL-er
-          for hver paragraf.
+          Lovspeil er en gratis, uoffisiell plattform utviklet av{" "}
+          <a href="https://devify.no" className="text-blue-700 underline">
+            Dev AS
+          </a>{" "}
+          for å lese norske lover og sentrale forskrifter. Målet er å gjøre
+          lovtekster enklere å navigere og lese enn på Lovdata, med klikkbare
+          kryssreferanser og rene URL-er for hver paragraf.
         </p>
         <p>
           Inspirert av{" "}

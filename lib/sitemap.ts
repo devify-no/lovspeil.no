@@ -87,6 +87,8 @@ export async function buildSectionSitemapChunk(
   baseUrl: string,
   chunkIndex: number
 ): Promise<MetadataRoute.Sitemap> {
+  if (chunkIndex < 0) return [];
+
   const offset = chunkIndex * SITEMAP_SECTION_CHUNK;
   const sections = await getSectionPathsPage(offset, SITEMAP_SECTION_CHUNK);
 

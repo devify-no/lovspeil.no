@@ -13,17 +13,17 @@ export async function generateSitemaps() {
 }
 
 export default async function sitemap(props: {
-  id: Promise<number>;
+  id: Promise<string | number>;
 }): Promise<MetadataRoute.Sitemap> {
-  const id = await props.id;
+  const rawId = await props.id;
+  const id = typeof rawId === "string" ? Number.parseInt(rawId, 10) : rawId;
   const baseUrl = getSiteBaseUrl();
 
-  try {
-    if (id === 0) {
-      return buildCoreSitemap(baseUrl);
-    }
-    return buildSectionSitemapChunk(baseUrl, id - 1);
-  } catch {
-    return id === 0 ? [] : [];
+  if (id === 0) {
+    return buildCoreSitemap(baseUrl);
   }
+  if (!Number.isFinite(id) || id < 1) {
+    return [];
+  }
+  return buildSectionSitemapChunk(baseUrl, id - 1);
 }

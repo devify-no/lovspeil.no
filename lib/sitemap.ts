@@ -107,6 +107,73 @@ export async function buildSectionSitemapChunk(
     }));
 }
 
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function formatLastMod(date: string | Date | undefined): string | null {
+  if (!date) return null;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+export function buildSitemapUrlsetXml(entries: MetadataRoute.Sitemap): string {
+  const urls = entries
+    .map((entry) => {
+      const lastmod = formatLastMod(entry.lastModified);
+      return `
+<url>
+<loc>${escapeXml(entry.url)}</loc>${lastmod ? `\n<lastmod>${lastmod}</lastmod>` : ""}${entry.changeFrequency ? `\n<changefreq>${entry.changeFrequency}</changefreq>` : ""}${entry.priority != null ? `\n<priority>${entry.priority}</priority>` : ""}
+</url>`;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
+</urlset>`;
+}
+
+export function parseSitemapId(rawId: string): number | null {
+  const id = rawId.replace(/\.xml$/i, "");
+  const parsed = Number.parseInt(id, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function buildSitemapChunkXml(
+  baseUrl: string,
+  id: number
+): Promise<string | null> {
+  if (id === 0) {
+    return buildSitemapUrlsetXml(await buildCoreSitemap(baseUrl));
+  }
+  if (id < 1) return null;
+  return buildSitemapUrlsetXml(
+    await buildSectionSitemapChunk(baseUrl, id - 1)
+  );
+}
+
 export function getSiteBaseUrl() {
   return getSiteUrl();
+}
+
+export async function buildSitemapIndexXml(baseUrl: string): Promise<string> {
+  const ids = await generateSitemapIds();
+  const entries = ids
+    .map(
+      ({ id }) => `
+<sitemap>
+<loc>${baseUrl}/sitemap/${id}.xml</loc>
+</sitemap>`
+    )
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries}
+</sitemapindex>`;
 }

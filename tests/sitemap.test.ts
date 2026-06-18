@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { SITEMAP_SECTION_CHUNK } from "@/lib/sitemap";
+import {
+  SITEMAP_SECTION_CHUNK,
+  buildSitemapIndexXml,
+  buildSitemapUrlsetXml,
+  parseSitemapId,
+} from "@/lib/sitemap";
 import { buildDocumentUrl } from "@/lib/lovdata/slug";
 
 describe("sitemap configuration", () => {
@@ -15,5 +20,35 @@ describe("sitemap configuration", () => {
 
     expect(lawDocUrl).toBe("https://lovspeil.no/lover/aksjeloven");
     expect(sectionUrl).toBe("https://lovspeil.no/lover/aksjeloven/3-4");
+  });
+
+  it("builds sitemap index XML linking to sub-sitemaps", async () => {
+    const xml = await buildSitemapIndexXml("https://lovspeil.no");
+
+    expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(xml).toContain("<sitemapindex");
+    expect(xml).toContain("<loc>https://lovspeil.no/sitemap/0.xml</loc>");
+  });
+
+  it("parses sitemap id from route segment", () => {
+    expect(parseSitemapId("0")).toBe(0);
+    expect(parseSitemapId("0.xml")).toBe(0);
+    expect(parseSitemapId("2.xml")).toBe(2);
+    expect(parseSitemapId("bad")).toBeNull();
+  });
+
+  it("builds urlset XML with escaped URLs", () => {
+    const xml = buildSitemapUrlsetXml([
+      {
+        url: "https://lovspeil.no/lover/aksjeloven",
+        lastModified: new Date("2024-06-12"),
+        changeFrequency: "monthly",
+        priority: 0.8,
+      },
+    ]);
+
+    expect(xml).toContain("<urlset");
+    expect(xml).toContain("<loc>https://lovspeil.no/lover/aksjeloven</loc>");
+    expect(xml).toContain("<lastmod>2024-06-12");
   });
 });

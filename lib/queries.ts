@@ -1,5 +1,6 @@
 import { db, schema } from "@/db";
 import { eq, asc, and, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { LegalDocument, LegalNode } from "@/db/schema";
 import type { TocEntry } from "@/types/legal";
 import {
@@ -138,20 +139,18 @@ export async function getIncomingReferences(nodeId: string) {
 }
 
 export async function getOutgoingReferences(nodeId: string) {
+  const targetDoc = alias(schema.legalDocuments, "target_doc");
+
   return db
     .select({
       ref: schema.legalReferences,
-      targetDoc: schema.legalDocuments,
+      targetDoc,
       targetNode: schema.legalNodes,
     })
     .from(schema.legalReferences)
-    .innerJoin(
-      schema.legalDocuments,
-      eq(schema.legalReferences.fromDocumentId, schema.legalDocuments.id)
-    )
     .leftJoin(
-      schema.legalDocuments,
-      eq(schema.legalReferences.targetDocumentId, schema.legalDocuments.id)
+      targetDoc,
+      eq(schema.legalReferences.targetDocumentId, targetDoc.id)
     )
     .leftJoin(
       schema.legalNodes,

@@ -14,6 +14,18 @@ function flattenToc(entries: TocEntry[]): TocEntry[] {
   return result;
 }
 
+function findTocEntryBySlugPath(
+  entries: TocEntry[],
+  slugPath: string
+): TocEntry | undefined {
+  for (const entry of entries) {
+    if (entry.slugPath === slugPath) return entry;
+    const nested = findTocEntryBySlugPath(entry.children, slugPath);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
 function useScrollSpy(sectionIds: string[]) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const sectionIdsKey = useMemo(() => sectionIds.join("|"), [sectionIds]);
@@ -34,7 +46,7 @@ function useScrollSpy(sectionIds: string[]) {
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
 
         if (visible.length > 0) {
-          setActiveId(visible[0].target.id);
+          setActiveId(visible[visible.length - 1].target.id);
         }
       },
       { rootMargin: "-10% 0px -70% 0px", threshold: [0, 0.1, 0.5] }
@@ -63,9 +75,22 @@ export function DocumentLayout({
   activeSlugPath,
   children,
 }: DocumentLayoutProps) {
-  const flat = flattenToc(entries);
-  const scrollTargets = flat.map((e) => e.anchor);
-  const activeAnchor = useScrollSpy(scrollTargets);
+  const flat = useMemo(() => flattenToc(entries), [entries]);
+
+  const sectionScrollTargets = useMemo(
+    () => flat.filter((entry) => entry.slugPath).map((entry) => entry.anchor),
+    [flat]
+  );
+
+  const spiedAnchor = useScrollSpy(activeSlugPath ? [] : sectionScrollTargets);
+
+  const activeAnchor = useMemo(() => {
+    if (activeSlugPath) {
+      return findTocEntryBySlugPath(entries, activeSlugPath)?.anchor ?? null;
+    }
+    return spiedAnchor;
+  }, [activeSlugPath, entries, spiedAnchor]);
+
   const tocRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
